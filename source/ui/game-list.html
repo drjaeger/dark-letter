@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Game list</title>
+        <style>
+            body {
+                background-color: #131312;
+            }
+
+            h1 {
+                font-family: sans-serif;
+                text-align: center;
+                padding-top: 140px;
+                font-size: 40px;
+                margin: -15px;
+            }
+
+            p {
+                font-family: sans-serif;
+                color: #900000;
+                text-align: center;
+            }
+
+            table {
+                font-family: sans-serif;
+                color: #ffffff;
+            }
+        </style>
+    </head>
+
+    <body>
+        <p>Active game list</p>
+        <script>
+            setInterval(() => {
+                fetch('http://localhost:3000/game/info')
+                    .then(async function (response) {
+                        return response.json();
+                    })
+                    .then(function (gameList) {
+                        console.log(gameList);
+                        deleteTables();
+                        gameList.forEach(activeGame => {
+                            createTable(activeGame);
+                        });
+                    })
+                    .catch(function (error) {
+                        console.log('Error: ' + error);
+                    });
+            }, 2000);
+
+            function deleteTables() {
+                const tables = document.getElementsByTagName('table');
+                for (let index = tables.length - 1; index >= 0; index--) {
+                    tables[index].parentNode.removeChild(tables[index]);
+                }
+            }
+
+            function createTable(data) {
+                var body = document.getElementsByTagName('body')[0];
+                var tbl = document.getElementById(data.id);
+                if (!tbl) {
+                    tbl = document.createElement('table');
+                    tbl.id = data.id;
+                    tbl.innerHTML = `Table ID: ${data.id}`;
+
+                    tbl.style.width = 'auto';
+                    // tbl.style.display = 'block';
+                    tbl.style.margin = '10px';
+                    tbl.setAttribute('border', '1');
+
+                    var trHeader = document.createElement('tr');
+                    [
+                        'id',
+                        'name',
+                        'avatar',
+                        'cardsInHand',
+                        'cardsOnTable',
+                    ].forEach(field => {
+                        var th = document.createElement('th');
+                        th.innerText = field;
+                        trHeader.appendChild(th);
+                    });
+
+                    tbl.appendChild(trHeader);
+                }
+
+                data.lobby.forEach(player => {
+                    if (!document.getElementById(player.id)) {
+                        var tr = document.createElement('tr');
+                        tr.id = player.id;
+
+                        Object.values(player).forEach(value => {
+                            var th = document.createElement('th');
+                            th.innerText = value;
+                            tr.appendChild(th);
+                        });
+
+                        tbl.appendChild(tr);
+                    }
+                });
+
+                body.appendChild(tbl);
+            }
+        </script>
+    </body>
+</html>

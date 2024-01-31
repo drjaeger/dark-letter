@@ -1,0 +1,266 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Game</title>
+        <style>
+            body {
+                background-color: #131312;
+                font-family: sans-serif;
+                color: #ffffff;
+            }
+
+            h1 {
+                font-family: sans-serif;
+                text-align: center;
+                padding-top: 140px;
+                font-size: 40px;
+                margin: -15px;
+            }
+
+            p {
+                font-family: sans-serif;
+                color: #900000;
+                text-align: center;
+            }
+        </style>
+    </head>
+
+    <body>
+        <p id="main-header">Dark letter</p>
+        <!-- Initial elements -->
+        <div id="initial-elements">
+            <label for="pname">Player name:</label>
+            <input id="playerName" /><br />
+
+            <label for="rid">Room ID:</label>
+            <input id="roomId" /> <br /><br />
+
+            <button onclick="onRoomJoin(true)">Create</button>
+            <button onclick="onRoomJoin(false)">Join</button>
+        </div>
+        <script>
+            let clicked = false
+            let myName
+            let myPlayer
+            function onRoomJoin(create) {
+                if (!clicked) {
+                    clicked = true
+                    
+                    const playerName = document.getElementById('playerName').value
+                    let id = document.getElementById('roomId').value
+
+                    myName = playerName
+                    if (create) {
+                      id = createRoom(playerName)
+                    } else {
+                      joinRoom(playerName, id)
+                    }
+                    console.log(`Room ID: ${id}`)
+                    console.log(`playerName: ${playerName}`)
+                    console.log(`Is creating a new room: ${create}`)
+                }
+
+                // HERE!!
+                // Create join / create logic here
+                // poll game room
+                // then fun starts!! :D
+            }
+
+            function createRoom(playerName) {
+              fetch("http://localhost:3000/game/create", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({name: playerName})
+              })
+              .then(async function (response) {
+                if (response.status !== 200) {
+                  window.alert(`Something went wrong :/`);
+                  clicked = false
+                } else {
+                  data = await response.json()
+                  console.log(data)
+                  drawGame(data.id)
+                }
+              })
+            }
+
+            function joinRoom(name, roomID) {
+              fetch("http://localhost:3000/game/join", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({name, roomID})
+              })
+              .then(async function (response) {
+                if (response.status !== 200) {
+                  window.alert(`Something went wrong :/`);
+                  clicked = falseo
+                } else {
+                  console.log(await response.json())
+                  drawGame(roomID)
+                }
+              })
+            }
+
+            function drawGame(gameID) {
+              const init = document.getElementById('initial-elements')
+              init.parentNode.removeChild(init)
+              const header = document.getElementById('main-header')
+              header.innerHTML = header.innerHTML + ` (room: ${gameID})`
+
+              var body = document.getElementsByTagName('body')[0];
+
+
+
+              // Controls
+              // start button
+              const startButton = document.createElement('button')
+              startButton.id = 'start-button'
+              startButton.innerHTML = 'START'
+              startButton.onclick = () => {
+                fetch("http://localhost:3000/game/start", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({roomID: gameID})
+                })
+              }
+
+              const leftButton = document.createElement('button')
+              leftButton.id = 'left-button'
+              leftButton.innerHTML = 'LEFT'
+              leftButton.onclick = () => {
+                let myCards = document.getElementById(`${myPlayer.id}-cardsInHand`).innerHTML.split(',')
+                console.log(myCards[0])
+                fetch("http://localhost:3000/game/playCard", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({playerID: myPlayer.id, roomID: gameID, card: myCards[0]})
+                })
+              }
+
+              const rightButton = document.createElement('button')
+              rightButton.id = 'right-button'
+              rightButton.innerHTML = 'Right'
+              rightButton.onclick = () => {
+                let myCards = document.getElementById(`${myPlayer.id}-cardsInHand`).innerHTML.split(',')
+                console.log(myCards[1])
+                fetch("http://localhost:3000/game/playCard", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({playerID: myPlayer.id, roomID: gameID, card: myCards[1]})
+                })
+              }
+
+              body.appendChild(startButton)
+              body.appendChild(document.createElement('br'))
+              body.appendChild(leftButton)
+              body.appendChild(rightButton)
+              body.appendChild(document.createElement('br'))
+
+
+              setInterval(() => {
+                fetch("http://localhost:3000/game/info")
+                .then(async function (response) {
+                    return response.json();
+                })
+                .then(function (gameList) {
+                    console.log(gameList)
+                    deleteTables()
+                    const myGame = gameList.find((game) => game.id === gameID)
+                    myPlayer = myGame.lobby.find(player => player.name === myName)
+                    createTable(myGame)
+                })
+                .catch(function (error) {
+                    console.log("Error: " + error);
+                });
+              }, 2000)
+            }
+
+            function deleteTables() {
+              const tables = document.getElementsByTagName('table')
+              for (let index = tables.length - 1; index >=0; index--) {
+                tables[index].parentNode.removeChild(tables[index])
+              }
+            }
+
+            function createTable(data) {
+              var body = document.getElementsByTagName('body')[0];
+
+              var tbl = document.getElementById(data.id)
+
+              if (!tbl) {
+                  tbl = document.createElement('table');
+                  tbl.id = data.id
+                  // tbl.innerHTML = `Table ID: ${data.id}`
+
+                  tbl.style.width = 'auto';
+                  // tbl.style.display = 'block';
+                  tbl.style.margin ='10px';
+                  tbl.setAttribute('border', '1');
+
+                  var trHeader = document.createElement('tr');
+                  ['id', 'name', 'avatar', 'cardsInHand', 'cardsOnTable'].forEach(field => {
+                      var th = document.createElement('th');
+                      th.innerText = field;
+                      trHeader.appendChild(th)
+                  })
+
+                  tbl.appendChild(trHeader)
+              }
+
+              data.lobby.forEach(player => {
+                let playerline = document.getElementById(player.id)
+                if (playerline) {playerline.parentNode.removeChild(playerline)}
+
+                if (!document.getElementById(player.id)) {
+                    var tr = document.createElement('tr');
+                    tr.id = player.id
+
+                    Object.entries(player).forEach(([key, value]) => {
+                        var th = document.createElement('th');
+                        th.id = `${player.id}-${key}`
+                        // handles table values
+                        switch (key) {
+                          case 'cardsInHand':
+                            console.log('cardsInhand')
+                            th.innerText = value.map(card => card.nr);
+                            console.log(th.innerText)
+                            break;
+                          case 'cardsOnTable':
+                            console.log('cardsOnTable')
+                            th.innerText = value.map(card => card.nr);
+                            console.log(th.innerText)
+                            break;
+                          default:
+                            th.innerText = value;
+                        }
+
+                        tr.appendChild(th)
+                    })
+
+                    tbl.appendChild(tr)
+                }
+                if (!document.getElementById(`button-${player.id}`)) {
+                  var button = document.createElement('button');
+                  button.id = `button-${player.id}`
+                  button.innerHTML = player.name
+                  body.appendChild(button)
+                }
+
+              })
+
+
+              body.appendChild(tbl)
+            }
+        </script>
+    </body>
+</html>
